@@ -1,0 +1,59 @@
+#################################
+#                               #
+#   Author: Huynh Phuc Dai      #
+#                               #
+#################################
+
+go version go1.10.4 darwin/amd64
+Processor 2.5 GHz Intel Core i7
+Memory 16 GB 1600 MHz DDR3
+
+I. Strategy:
+    I will show what I have analyzed from this task:
+        1. We do care about activate date of the latest owner of a phone number only.
+        2. No deactivate date means that number has been used be the latest number
+        3. An appropriate phone number use history must have deactivate time linked with the same value in activate date.
+        4. Data are not ordered.
+
+    So I decided to choose using map a.k.a dictionary to store activate and deactivate dates.
+    The goal is getting the latest deactivate date so as to track back to identify the first activate date.
+    Fortunately, date date follows a format "YYYY-MM-DD" so I don't need to care about manipulate date for sorting.
+    The big question is which field will be used as key?
+    My approach is using deactivate date as the key:
+        1. Ordinary flow:
+            1.1. I know that if a deactivate date is empty a.k.a "" means it is the latest history I want.
+            1.2. Getting latest activate date from that deactivate date.
+            1.3. To trace back, I follow the logic: activate of the newer record must be deactivate of the previous record.
+                 So I get the deactivate date of the previous record by the activate date above.
+            1.4. If I cannot get a value with that key, it means the current record is the start record of the latest history. 
+            back to 1.1
+        
+        For example, this is a map from above that store dates with phone number "0987000001". This data is getting from sample data
+            0987000001
+                deactivate(key)         activate
+                "2016-05-01"            "2016-03-01"
+                "2016-03-01"            "2016-01-01"
+                ""                      "2016-12-01"
+                "2016-12-01"            "2016-09-01"
+                "2016-09-01"            "2016-06-01"
+        Dry run:
+            1. 0987000001 has a empty deactivate date so we have the latest activate date is "2016-12-01"
+            2. We use the latest activate to find the previous record. Found: "2016-12-01" as deactivate date and "2016-09-01" as activate date
+            3. Check whether "2016-09-01" has value. Yes, it is "2016-09-01" as deactivate date and "2016-06-01" as activate date.
+            4. Next, "2016-06-01" key is not exists in map. So the first activate date of 0987000001 is "2016-06-01".
+
+        2. Special flow - a phone number has records but doesn't have a empty deactivate date:
+            2.1. we sort the key of the map - ASC default - get the last one as the latest deactivate date.
+            2.2. as 1.1 and continue on that flow.
+
+II. Complexity:
+    1. Time: 
+        - Only scan file 1 time.
+        - I have used "map" so for inserting, it is O(1).
+        - Getting result. I think it depends on which flow:
+            - For the ordinary flow: it just be got values from a map so O(1)
+            - For the special flow: I used sorting keys before getting value. Golang uses Quick Sort for Sorting so it will be O(n log(n)) plus getting values from map O(1).
+    2. Data structure:
+        - I use string-string map to store [deactivate date]:[activate date]
+        - I use string-[string-string map] map to store [phone number]: [date map above]
+        - All data is stored as string and not manipulated.
